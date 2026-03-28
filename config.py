@@ -1,0 +1,1 @@
+PLACES_PHOTO_PATH = r'c:\Users\mamed\Desktop\random staff\йцукеен.jpg'
