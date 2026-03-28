@@ -1,0 +1,1 @@
+PLACES_PHOTO_PATH = r'some path'
