@@ -3,7 +3,7 @@ from config import SCENE_PHOTO_PATH, USERS_SCENE_FOLDER
 import shutil
 import os
 
-def put_point(img_path = SCENE_PHOTO_PATH, x, y, radius=5, color=(255,0,0), opacity=150, save_path=None):
+def put_point(x, y, img_path = SCENE_PHOTO_PATH, radius=5, color=(255,0,0), opacity=150, save_path=None):
     original_img = Image.open(img_path).convert("RGBA")
     
     # создаём отдельный прозрачный слой 
@@ -21,7 +21,7 @@ def put_point(img_path = SCENE_PHOTO_PATH, x, y, radius=5, color=(255,0,0), opac
     
     result.save(save_path)
 
-# put_point(x=275, y=635, radius=40, color=(255,0,0))
+# put_point(275, 635, radius=40, color=(255,0,0))
 
 def manage_userphotos_folder(uid = 0):
     if uid:
