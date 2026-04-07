@@ -3,7 +3,7 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 
 from aiogram import Dispatcher, Bot, types
-# from aiogram.types import InputMediaPhoto
+from aiogram.types import InputMediaPhoto
 from aiogram.types import LabeledPrice, PreCheckoutQuery
 from aiogram.types.message import ContentType
 from aiogram.utils import executor
@@ -61,7 +61,7 @@ async def main(message: types.Message):
         await OrderStage.pre_order.set()
 
     elif message.text == 'Профиль':
-        await bot.send_message(message.from_id, '')
+        await bot.send_message(message.from_id, '123123')
     elif message.text == 'Афиша':
         await bot.send_location(message.from_id, latitude=53.905227, longitude=27.564624)
         
@@ -76,7 +76,7 @@ async def preOrder_func(message: types.Message, state: FSMContext):
     await state.update_data(po_msg = message.text)
     data = await state.get_data()
 
-    if message.text == 'Назад':
+    if data['po_msg'] == 'Назад':
         await state.finish()
         manage_userphotos_folder()
 
@@ -93,6 +93,7 @@ async def setSeat_func(message: types.Message, state: FSMContext):
     await state.update_data(seats = message.text)
     data = await state.get_data()
     order_msg = ''
+    x, y = 0, 0
 
     if message.text == 'Назад':
         await state.finish()
@@ -106,15 +107,38 @@ async def setSeat_func(message: types.Message, state: FSMContext):
     valid_message = data['seats'].replace('.', '').replace(',', '').replace(' ', '').isdigit()
 
     if valid_message:
+        create_up_folder(message.from_id)
+
         for i in data['seats'].split(','):
             si = i.split('.') #? si - Seat Info
+            
             if db_client.seat_is_free('places', int(si[0]), int(si[1])):
+                
                 user_buffer[message.from_id]['ordered_places'].append(i)
                 order_msg += f'\nМесто {si[0]}.{si[1]} свободно'
+
+                x, y = get_cords(int(si[0]), int(si[1]))
+                print(x, y)
+                put_point(
+                    x, y,
+                    img_path = f"{USERS_SCENE_FOLDER}\{message.from_id}\scene.png", 
+                    radius=40, color=(255,0,255),
+                    save_path= f"{USERS_SCENE_FOLDER}\{message.from_id}\scene.png"
+                )
+            
             else:
                 order_msg += f'\nМесто {si[0]}.{si[1]} занято'
-            
-        await bot.send_message(message.from_id, order_msg)
+                
+        with open(f"{USERS_SCENE_FOLDER}\{message.from_id}\scene.png", 'rb') as n_photo:
+            await bot.edit_message_media(
+                InputMediaPhoto(
+                    n_photo,
+                    caption = order_msg
+                ),
+                message.from_id,
+                user_buffer[message.from_id]['edit_msg_id'].message_id,
+            )
+
         await bot.send_message(message.from_id, f'В вашу корзину добавлено {len(user_buffer[message.from_id]["ordered_places"])} элементов', reply_markup=go_to_payment)
         await OrderStage.pay.set()
 
@@ -133,7 +157,7 @@ async def pay_func(message: types.Message, state: FSMContext):
 
     if data['payment_stage'] == 'Перейти к оплате':
 
-        # формируем данные для инвойса
+        #* формируем данные для инвойса
         user_buffer[message.from_id]['prices'].clear()
         total_amount = price_per_seat * len(user_buffer[message.from_id]['ordered_places'])
 
@@ -170,11 +194,10 @@ async def pay_func(message: types.Message, state: FSMContext):
 async def process_pre_checkout_query(pre_checkout_query: PreCheckoutQuery):
     print("🔵 Pre-checkout вызван")
     
-    # проверка на корректную сумму платежа
+    #* проверка на корректную сумму платежа
     if pre_checkout_query.total_amount <= 0:
         await bot.answer_pre_checkout_query(
-            pre_checkout_query.id,
-            ok=False,
+            pre_checkout_query.id, ok=False,
             error_message="Сумма платежа некорректна. Попробуйте снова."
         )
         return
@@ -182,10 +205,26 @@ async def process_pre_checkout_query(pre_checkout_query: PreCheckoutQuery):
     await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
 
 @dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT, state='*')
-async def process_successful_payment(message: types.Message):
+async def process_successful_payment(message: types.Message, state: FSMContext):
     print("🟢 Успешная оплата")
     payment = message.successful_payment
     amount = payment.total_amount / 100
     await message.answer(f"✅ Оплата {amount} {payment.currency} прошла успешно!\nОбязательно сохраните чек выше")
+
+    for i in user_buffer[message.from_id]['ordered_places']:
+        si = i.split('.')
+        x, y = get_cords(int(si[0]), int(si[1]))
+        print('[process_successful_payment]: ', x, y)
+        put_point(
+            x, y,
+            img_path = SCENE_PHOTO_PATH,
+            radius=40, color=(255,0,0),
+            save_path= SCENE_PHOTO_PATH
+        )
+
+        db_client.remove_column('places', i.split('.')[0], i.split('.')[1])
+
+    await login(message, True)
+    await state.finish()
 
 executor.start_polling(dp, on_startup=start)
