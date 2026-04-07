@@ -2,56 +2,59 @@ from supabase import create_client, Client
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
+# load_dotenv()
 
 # url = os.environ.get("SUPABASE_URL")
 # key = os.environ.get("SUPABASE_KEY")
 # supabase = create_client(url, key)
 
-class DataBase:
-    def __init__(self, url: str, key: str):
+class DataBase():
+    def __init__(self, url, key):
         self.supabase: Client = create_client(url, key)
 
-    def insert_data(self, table_name: str, data: dict):
+    #* получаем все данные из указанной таблицы
+    def get_all(self, table_name):
+        return self.supabase.table(table_name).select('*').execute()
+    
+    #* получаем данные из нужной ячейки
+    def get_data(self, table_name, cell_name, key, key_val):
+        return self.supabase.table(table_name).select(cell_name).eq(key, key_val).data[0]
+
+    #* метод paste_to_cell нужен для раобты с таблицей users
+    def paste_to_cell(self, cell_name, data, key, key_val):
+        response = self.supabase.table('users') \
+                .select(cell_name) \
+                .eq(key, key_val) \
+                .execute().data[0][cell_name]
+
+        # если response --> str, значит операция идёт над ячейкой purchased
+        # если response --> int, значит операция идёт над bought_with_discount или spent
+        # т.к. bought_with_discount и spent типа int, нет разницы как и в какую добавлять data 
+        if isinstance(response, str)  : response += f', {data}'
+        elif isinstance(response, int): response += data
+
+        return self.supabase.table('users').update({cell_name: response}).eq(key, key_val).execute()
+
+    
+    #* добавляет строки в таблицы
+    def insert_data(self, table_name, data):
         return self.supabase.table(table_name).insert(data).execute()
 
-    def get_all(self, table_name: str):
-        return self.supabase.table(table_name).select("*").execute()
+    #* удаляет купленные места из списка доступных
+    def remove_column(self, table_name: str, row: int, col: int):
+        res = self.supabase.table(table_name).select('free_column').eq('free_row', row).execute()
+        if not res.data: return False
+        
+        current = res.data[0]['free_column']
+        updated = current.replace(str(col), '', 1)
+        
+        self.supabase.table(table_name).update({'free_column': updated}).eq('free_row', row).execute()
+        return current != updated
 
-    def get_by_id(self, table_name: str, item: int):
-        return self.supabase.table(table_name).select("*").eq("free_row", item).execute()
-
-    def update_data(self, table_name: str, item: int, updates: dict):
-        return self.supabase.table(table_name).update(updates).eq("free_row", item).execute()
-    
-    def seat_is_free(self, table_name: str, row: int, column: int):
-        try:
-            # Получаем запись по free_row
-            response = self.supabase.table(table_name)\
-                .select('free_column')\
-                .eq('free_row', row)\
-                .execute()
-            
-            # Если запись не найдена
-            if not response.data: return False
-            
-            # Получаем список колонок из первой найденной записи
-            free_columns = response.data[0].get('free_column', '')
-            
-            # Если free_column пустой или None
-            if not free_columns: return False
-            
-            # Преобразуем строку "1, 2, 3, 4, 5, 6, 7, 8" в список целых чисел
-            columns_list = [int(col.strip()) for col in free_columns.split(',')]
-
-            return column in columns_list
-            
-        except Exception as e:
-            print(f"Ошибка при проверке места: {e}")
-            return False
+    #* проверяет свободно ли место  
+    def seat_is_free(self, table_name: str, row: int, col: int):
+        res = self.supabase.table(table_name).select('free_column').eq('free_row', row).execute()
+        return bool(res.data and str(col) in res.data[0].get('free_column', ''))
     
 
 # cl = DataBase(url, key)
-
-# for i in cl.get_all('places').data:
-#     print(i['free_column'])
