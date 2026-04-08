@@ -8,6 +8,12 @@ user_main_menu = ReplyKeyboardMarkup(
     ], resize_keyboard = True
 )
 
+profile_rkm = ReplyKeyboardMarkup(
+    keyboard = [
+        [KeyboardButton('Промокоды')]
+    ], resize_keyboard = True
+)
+
 pre_order_rkm = ReplyKeyboardMarkup(
     keyboard = [
         [KeyboardButton('Купить места')],
@@ -25,6 +31,12 @@ go_to_payment = ReplyKeyboardMarkup(
     keyboard = [
         [KeyboardButton('Перейти к оплате')],
         [KeyboardButton('Выбрать места заново')],
+        [KeyboardButton('Назад')]
+    ], resize_keyboard = True
+)
+
+cancel_rkm = ReplyKeyboardMarkup(
+    keyboard = [
         [KeyboardButton('Назад')]
     ], resize_keyboard = True
 )

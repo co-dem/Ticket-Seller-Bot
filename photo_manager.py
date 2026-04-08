@@ -62,14 +62,13 @@ def get_cords(row, col):
 # put_point(x, y, img_path = 'src\scene.png', radius=40, color=(255,0,0), save_path='src\scene1.png')
 
 def create_up_folder(uid): #? up -> User Photos
-    if os.path.exists(USERS_SCENE_FOLDER): 
-        os.mkdir(f"{USERS_SCENE_FOLDER}\{uid}")
-        shutil.copy(SCENE_PHOTO_PATH, f"{USERS_SCENE_FOLDER}\{uid}\scene.png")
-
+    if os.path.exists(f"{USERS_SCENE_FOLDER}\{uid}"): shutil.rmtree(f"{USERS_SCENE_FOLDER}\{uid}")
+    os.mkdir(f"{USERS_SCENE_FOLDER}\{uid}")
+    shutil.copy(SCENE_PHOTO_PATH, f"{USERS_SCENE_FOLDER}\{uid}\scene.png")
 
 def manage_userphotos_folder(uid = 0):
-    if uid:
-        shutil.rmtree(f"{USERS_SCENE_FOLDER}\{uid}")
-    else:
-        if os.path.exists(USERS_SCENE_FOLDER): shutil.rmtree(USERS_SCENE_FOLDER)
+    if os.path.exists(USERS_SCENE_FOLDER): 
+        shutil.rmtree(USERS_SCENE_FOLDER)
         os.mkdir(USERS_SCENE_FOLDER)
+    else:
+        shutil.rmtree(f"{USERS_SCENE_FOLDER}\{uid}")
